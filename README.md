@@ -76,18 +76,6 @@ Change the password after first login using the admin settings if available.
 
 - Styling is in `style.css` and `admin/admin-style.css`.
 
-## How to push to GitHub (local steps)
-
-```bash
-# inside project root
-git init
-git add .
-git commit -m "Initial commit: Online Vehicle Registration System"
-# create a repo on GitHub, then add remote and push
-git remote add origin https://github.com/<your-username>/<repo-name>.git
-git branch -M main
-git push -u origin main
-```
 
 ## Contributing
 
@@ -95,14 +83,5 @@ Contributions are welcome. Please sanitize inputs, secure file uploads, and add 
 
 ## License
 
-Add your preferred license (e.g., MIT) to a `LICENSE` file before publishing.
-
----
-
-If you want, I can:
-
-- Add this `README.md` file to the repository (already done),
-- Create a short `LICENSE` file (MIT),
-- Or generate a concise GitHub repo description and topics you can copy into the GitHub UI.
-
-Tell me which next step you'd like.
+Developed by Josh Alexander.
+Software Engineer.
