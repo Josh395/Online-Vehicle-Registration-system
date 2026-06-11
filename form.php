@@ -25,7 +25,7 @@ if (isset($_GET['id'])) {
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Fetch user's TIN and email
     $user_id = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : 0;
-    $stmt = $pdo->prepare("SELECT tin, email FROM users WHERE user_id = ?");
+    $stmt = $pdo->prepare("SELECT tin, email, phone FROM users WHERE user_id = ?");
     $stmt->execute([$user_id]);
     $user = $stmt->fetch();
 
@@ -33,10 +33,48 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $error = 'Unable to save application because your user account was not found. Please log out and log in again.';
     }
 
+    $nin_search = isset($_POST['nin_search']) ? trim($_POST['nin_search']) : '';
+    $full_name = '';
+    $id_type = '';
+    $id_number = '';
+    $email = '';
+    $primary_phone = '';
+    $dob = '';
+    $physical_address = '';
     $tin = $user ? $user['tin'] : '';
-    $full_name = isset($_POST['full_name']) ? trim($_POST['full_name']) : '';
-    $id_type = isset($_POST['id_type']) ? $_POST['id_type'] : '';
-    $id_number = isset($_POST['id_number']) ? $_POST['id_number'] : '';
+
+    if ($nin_search !== '') {
+        if (!preg_match('/^[0-9]{20}$/', $nin_search)) {
+            $error = 'NIN must be exactly 20 digits.';
+        } else {
+            $stmt = $pdo->prepare("SELECT name, tin, dob, physical_address FROM valid_nins WHERE nin = ?");
+            $stmt->execute([$nin_search]);
+            $nin_record = $stmt->fetch();
+
+            if (!$nin_record) {
+                $error = 'NIN not found in the database.';
+            } elseif ($user && $nin_record['tin'] !== $user['tin']) {
+                $error = 'The NIN entered does not match your registered TIN.';
+            } else {
+                $full_name = $nin_record['name'];
+                $tin = $nin_record['tin'];
+                $id_type = 'national_id';
+                $id_number = $nin_search;
+                $dob = $nin_record['dob'] ?? '';
+                $physical_address = $nin_record['physical_address'] ?? '';
+                $email = $user['email'];
+                $primary_phone = $user['phone'];
+            }
+        }
+    } else {
+        $full_name = isset($_POST['full_name']) ? trim($_POST['full_name']) : '';
+        $id_type = isset($_POST['id_type']) ? $_POST['id_type'] : '';
+        $id_number = isset($_POST['id_number']) ? $_POST['id_number'] : '';
+        $email = isset($_POST['email']) ? trim($_POST['email']) : '';
+        $primary_phone = isset($_POST['primary_phone']) ? trim($_POST['primary_phone']) : '';
+        $dob = isset($_POST['dob']) ? $_POST['dob'] : '';
+        $physical_address = isset($_POST['physical_address']) ? trim($_POST['physical_address']) : '';
+    }
     // check for valid NIN/Passport matches name and TIN
     if (!$error) {
         if ($id_type === 'national_id') {
@@ -62,8 +100,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             'user_id' => $user_id,
             'full_name' => $full_name,
             'dob' => $_POST['dob'],
-            'primary_phone' => $_POST['primary_phone'],
-            'email' => $_POST['email'],
+                'primary_phone' => $primary_phone ?: $_POST['primary_phone'],
+                'email' => $email ?: $_POST['email'],
             'physical_address' => $_POST['physical_address'],
             'id_type' => $id_type,
             'id_number' => $id_number,
@@ -110,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     mkdir($upload_dir, 0777, true);
                 }
 
-                $file_types = ['id_document', 'vehicle_photo', 'insurance_doc'];
+                $file_types = ['vehicle_photo'];
                 foreach ($file_types as $file_type) {
                     if (isset($_FILES[$file_type]) && $_FILES[$file_type]['error'] == 0) {
                         $file = $_FILES[$file_type];
@@ -164,45 +202,54 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <div class="form-section">
             <h2>Personal Information</h2>
                 <div class="form-group">
+                    <label for="nin_search">Enter NIDA (NIN) to lookup your details</label>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="text" id="nin_search" name="nin_search" pattern="[0-9]{20}" maxlength="20" placeholder="Enter 20-digit NIN" style="flex:1;" value="<?php echo isset($nin_search) ? htmlspecialchars($nin_search) : ''; ?>" />
+                        <button type="button" id="lookup_nin" class="btn-secondary">Lookup</button>
+                    </div>
+                    <small>Click "Lookup" to fetch name, email and phone from our records.</small>
+                </div>
+                <div class="form-group">
                     <label for="full_name">Full Name *</label>
-                    <input type="text" id="full_name" name="full_name" required value="<?php echo $edit_mode ? htmlspecialchars($application['full_name']) : ''; ?>">
+                    <input type="text" id="full_name" name="full_name" required readonly value="<?php echo $edit_mode ? htmlspecialchars($application['full_name']) : (isset($full_name) ? htmlspecialchars($full_name) : ''); ?>">
                 </div>
                 <div class="form-group">
                     <label for="dob">Date of Birth *</label>
-                    <input type="date" id="dob" name="dob" required value="<?php echo $edit_mode ? htmlspecialchars($application['dob']) : ''; ?>">
+                    <input type="date" id="dob" name="dob" required <?php echo $edit_mode ? '' : 'readonly'; ?> value="<?php echo $edit_mode ? htmlspecialchars($application['dob']) : (isset($dob) ? htmlspecialchars($dob) : ''); ?>">
                 </div>
                 <div class="form-group">
                     <label for="id_type">ID Type *</label>
-                    <select id="id_type" name="id_type" required onchange="updateIdNumberField()">
-                        <option value="">Select ID Type</option>
-                        <option value="national_id" <?php echo ($edit_mode && $application['id_type'] == 'national_id') ? 'selected' : ''; ?>>NIDA (NIN)</option>
-                        <option value="passport" <?php echo ($edit_mode && $application['id_type'] == 'passport') ? 'selected' : ''; ?>>Passport</option>
-                    </select>
+                    <?php if ($edit_mode): ?>
+                        <select id="id_type" name="id_type" required onchange="updateIdNumberField()">
+                            <option value="">Select ID Type</option>
+                            <option value="national_id" <?php echo ($edit_mode && $application['id_type'] == 'national_id') ? 'selected' : ''; ?>>NIDA (NIN)</option>
+                            <option value="passport" <?php echo ($edit_mode && $application['id_type'] == 'passport') ? 'selected' : ''; ?>>Passport</option>
+                        </select>
+                    <?php else: ?>
+                        <input type="text" id="id_type_display" readonly value="NIDA (NIN)">
+                        <input type="hidden" id="id_type" name="id_type" value="national_id">
+                    <?php endif; ?>
                 </div>
                 <div class="form-group">
                     <label for="id_number">ID Number *</label>
-                    <input type="text" id="id_number" name="id_number" required 
+                    <input type="text" id="id_number" name="id_number" required <?php echo $edit_mode ? '' : 'readonly'; ?>
                         pattern="[0-9]{20}"
-                        minlength="9" maxlength="20"
+                        minlength="20" maxlength="20"
                         title="Enter a valid NIDA (20 digits) or Passport (2 letters + 7 digits) number"
                         placeholder=""
-                        value="<?php echo $edit_mode ? htmlspecialchars($application['id_number']) : ''; ?>">
+                        value="<?php echo $edit_mode ? htmlspecialchars($application['id_number']) : (isset($id_number) ? htmlspecialchars($id_number) : ''); ?>">
                 </div>
                 <div class="form-group full-width">
                     <label for="physical_address">Residential Address *</label>
-                    <input type="text" id="physical_address" name="physical_address" required pattern="[A-Za-z0-9\s,.'-]+" title="Enter a valid address (letters, numbers, spaces, comma, dot, apostrophe, dash)" placeholder="e.g. 123 Main St, P.O. Box 456, City" value="<?php echo $edit_mode ? htmlspecialchars($application['physical_address']) : ''; ?>">
+                    <input type="text" id="physical_address" name="physical_address" required <?php echo $edit_mode ? '' : 'readonly'; ?> pattern="[A-Za-z0-9\s,.'-]+" title="Enter a valid address (letters, numbers, spaces, comma, dot, apostrophe, dash)" placeholder="e.g. 123 Main St, P.O. Box 456, City" value="<?php echo $edit_mode ? htmlspecialchars($application['physical_address']) : (isset($physical_address) ? htmlspecialchars($physical_address) : ''); ?>">
                 </div>
                 <div class="form-group">
                     <label for="primary_phone">Phone Number *</label>
-                    <input type="tel" id="primary_phone" name="primary_phone" required pattern="\+?[0-9]{10,15}" title="Enter a valid phone number (10-15 digits, may start with +)" placeholder="e.g. +255712345678" value="<?php echo $edit_mode ? htmlspecialchars($application['primary_phone']) : ''; ?>">
+                    <input type="tel" id="primary_phone" name="primary_phone" required readonly pattern="\+?[0-9]{10,15}" title="Phone number is loaded from your account" placeholder="e.g. 0712345678" value="<?php echo $edit_mode ? htmlspecialchars($application['primary_phone']) : (isset($primary_phone) ? htmlspecialchars($primary_phone) : ''); ?>">
                 </div>
                 <div class="form-group">
                     <label for="email">Email Address *</label>
-                    <input type="email" id="email" name="email" required placeholder="e.g. johndoe@email.com" value="<?php echo $edit_mode ? htmlspecialchars($application['email']) : ''; ?>">
-                </div>
-                <div class="form-group">
-                    <label for="id_document">ID Document (optional)</label>
-                    <input type="file" id="id_document" name="id_document" accept=".pdf,.jpg,.jpeg,.png">
+                    <input type="email" id="email" name="email" required readonly placeholder="e.g. joshalexander@gmail.com" value="<?php echo $edit_mode ? htmlspecialchars($application['email']) : (isset($email) ? htmlspecialchars($email) : ''); ?>">
                 </div>
         </div>
 <script>
@@ -212,24 +259,82 @@ function updateIdNumberField() {
     if (idType === 'passport') {
         idNumber.pattern = '[A-Za-z]{2}[0-9]{7}';
         idNumber.title = 'Passport number must be 2 letters followed by 7 digits (e.g. AB1234567)';
-    idNumber.placeholder = '';
-    idNumber.minLength = 9;
-    idNumber.maxLength = 9;
+        idNumber.placeholder = '';
+        idNumber.minLength = 9;
+        idNumber.maxLength = 9;
     } else if (idType === 'national_id') {
         idNumber.pattern = '[0-9]{20}';
         idNumber.title = 'NIDA number must be exactly 20 digits (e.g. 19991234567890000001)';
-    idNumber.placeholder = '';
-    idNumber.minLength = 20;
-    idNumber.maxLength = 20;
+        idNumber.placeholder = '';
+        idNumber.minLength = 20;
+        idNumber.maxLength = 20;
     } else {
-    idNumber.pattern = '';
-    idNumber.title = 'Enter NIDA (20 digits) or Passport (2 letters + 7 digits)';
-    idNumber.placeholder = '';
-    idNumber.removeAttribute('minlength');
+        idNumber.pattern = '';
+        idNumber.title = 'Enter NIDA (20 digits) or Passport (2 letters + 7 digits)';
+        idNumber.placeholder = '';
+        idNumber.removeAttribute('minlength');
         idNumber.removeAttribute('maxlength');
     }
 }
-window.onload = updateIdNumberField;
+
+// NIN lookup: fetch user info by NIN and prefill fields
+async function lookupNin(nin) {
+    try {
+        const resp = await fetch('nin_lookup.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'nin=' + encodeURIComponent(nin)
+        });
+        const data = await resp.json();
+        return data;
+    } catch (e) {
+        return { success: false, message: 'Network error' };
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateIdNumberField();
+
+    var lookupBtn = document.getElementById('lookup_nin');
+    var ninInput = document.getElementById('nin_search');
+    lookupBtn && lookupBtn.addEventListener('click', async function() {
+        var nin = ninInput.value.trim();
+        if (!nin || !/^[0-9]{20}$/.test(nin)) {
+            alert('Please enter a valid 20-digit NIN.');
+            return;
+        }
+        lookupBtn.disabled = true;
+        lookupBtn.textContent = 'Looking up...';
+        const result = await lookupNin(nin);
+        lookupBtn.disabled = false;
+        lookupBtn.textContent = 'Lookup';
+        if (result.success) {
+            // Prefill fields
+            if (result.data.name) document.getElementById('full_name').value = result.data.name;
+            if (result.data.dob) document.getElementById('dob').value = result.data.dob;
+            if (result.data.physical_address) document.getElementById('physical_address').value = result.data.physical_address;
+            if (result.data.email) document.getElementById('email').value = result.data.email;
+            if (result.data.phone) document.getElementById('primary_phone').value = result.data.phone;
+            // set ID type and number
+            document.getElementById('id_type').value = 'national_id';
+            updateIdNumberField();
+            document.getElementById('id_number').value = nin;
+            // store tin in a hidden field so server-side can validate if needed
+            var existing = document.getElementById('user_tin_hidden');
+            if (!existing) {
+                existing = document.createElement('input');
+                existing.type = 'hidden';
+                existing.id = 'user_tin_hidden';
+                existing.name = 'user_tin_hidden';
+                document.querySelector('form.vehicle-form').appendChild(existing);
+            }
+            existing.value = result.data.tin || '';
+            alert('User information populated from NIN. Please complete remaining fields.');
+        } else {
+            alert(result.message || 'No user found for that NIN.');
+        }
+    });
+});
 </script>
 
         <div class="form-section">
@@ -238,7 +343,7 @@ window.onload = updateIdNumberField;
                 <div class="form-group">
                     <label for="vin">Vehicle Identification Number (VIN / Chassis Number) *</label>
                     <input type="text" id="vin" name="vin" required pattern="[A-Za-z0-9]{17}" minlength="17" maxlength="17" title="VIN must be exactly 17 alphanumeric characters" placeholder="e.g. ABC12345678901234" value="<?php echo $edit_mode ? htmlspecialchars($application['vin']) : ''; ?>">
-                </div>
+                    <input type="text" id="full_name" name="full_name" required readonly value="<?php echo $edit_mode ? htmlspecialchars($application['full_name']) : (isset($full_name) ? htmlspecialchars($full_name) : ''); ?>">
 
                 <div class="form-group">
                     <label for="engine_number">Engine Number *</label>
@@ -354,11 +459,6 @@ window.onload = updateIdNumberField;
                         <option value="third_party" <?php echo ($edit_mode && isset($application['cover_type']) && $application['cover_type'] == 'third_party') ? 'selected' : ''; ?>>Third Party</option>
                         <option value="comprehensive" <?php echo ($edit_mode && isset($application['cover_type']) && $application['cover_type'] == 'comprehensive') ? 'selected' : ''; ?>>Comprehensive</option>
                     </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="insurance_doc">Insurance Document</label>
-                    <input type="file" id="insurance_doc" name="insurance_doc" accept=".pdf,.jpg,.jpeg,.png">
                 </div>
             </div>
         </div>

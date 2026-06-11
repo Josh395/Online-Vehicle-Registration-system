@@ -23,27 +23,6 @@ if ($application['payment_status'] == 'completed') {
 
 $error = '';
 $success = '';
-
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $payment_method = $_POST['payment_method'];
-    $amount_entered = isset($_POST['amount']) ? floatval($_POST['amount']) : 0;
-    $required_amount = floatval($application['total_amount']);
-    $control_number = 'CN' . time() . rand(100,999);
-    if ($amount_entered < $required_amount) {
-        $error = 'The amount entered is less than the required amount. Please enter the full amount: TZS ' . number_format($required_amount, 2);
-    } else {
-        $stmt = $pdo->prepare("INSERT INTO payments (control_number, owner_id, application_id, amount, method, status) VALUES (?, ?, ?, ?, ?, 'Paid')");
-        $stmt->execute([$control_number, $_SESSION['user_id'], $application_id, $amount_entered, ucfirst(str_replace('_', '', $payment_method))]);
-        $stmt = $pdo->prepare("UPDATE applications SET payment_status = 'completed' WHERE id = ?");
-        $stmt->execute([$application_id]);
-        $message = 'Payment successful for application ' . $application['reference_number'] . '. Your application is now under review by admin.';
-        $stmt = $pdo->prepare("INSERT INTO notifications (user_id, application_id, message) VALUES (?, ?, ?)");
-        $stmt->execute([$_SESSION['user_id'], $application_id, $message]);
-    $success = 'Payment successful! Your application has been submitted completely!';
-    echo '<script>alert("Renewal submitted completely!");</script>';
-    echo '<meta http-equiv="refresh" content="3;url=dashboard.php">';
-    }
-}
 ?>
 <?php include 'includes/header.php'; ?>
 
@@ -51,14 +30,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <div class="payment-container">
         <h1>Payment Processing</h1>
         
-        <?php if ($error): ?>
-            <div class="alert error"><?php echo $error; ?></div>
-        <?php endif; ?>
-        
-        <?php if ($success): ?>
-            <div class="alert success"><?php echo $success; ?></div>
-            <div class="alert info">Your payment will be verified by an administrator. You will be notified once your application is updated.</div>
-        <?php else: ?>
+        <div id="payment-result" style="display: none;">
+            <div id="payment-message"></div>
+            <div id="transaction-info" style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px; display: none;">
+                <p><strong>Transaction ID:</strong> <span id="txn-id"></span></p>
+                <p><strong>Reference Number:</strong> <span id="ref-number"></span></p>
+                <p><strong>Amount Paid:</strong> <span id="txn-amount"></span></p>
+                <p style="margin-top: 15px; font-size: 14px; color: #666;">Your payment will be verified by an administrator. You will be notified once your application is updated.</p>
+                <a href="dashboard.php" class="btn-primary" style="margin-top: 15px; display: inline-block;">Go to Dashboard</a>
+            </div>
+        </div>
+
+        <div id="payment-form-section">
             <div class="payment-details">
                 <div class="payment-info">
                     <h2>Application Details</h2>
@@ -67,11 +50,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <p><strong>Amount Due:</strong> TZS <?php echo number_format($application['total_amount'], 2); ?></p>
                 </div>
 
-                <form method="POST" class="payment-form">
+                <form id="payment-form" class="payment-form">
                     <h2>Select Payment Method</h2>
                     <div class="payment-methods">
                         <label class="payment-method">
-                            <input type="radio" name="payment_method" value="bank" required>
+                            <input type="radio" name="payment_method" value="bank_transfer" required>
                             <div class="method-content">
                                 <h3>Bank Transfer</h3>
                                 <p>Transfer money to our bank account</p>
@@ -83,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             </div>
                         </label>
                         <label class="payment-method">
-                            <input type="radio" name="payment_method" value="mobilemoney">
+                            <input type="radio" name="payment_method" value="mobile_money" required>
                             <div class="method-content">
                                 <h3>Mobile Money</h3>
                                 <p>Pay via M-Pesa, Tigo Pesa, or Airtel Money</p>
@@ -96,30 +79,104 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     </div>
                     <div class="form-group">
                         <label for="amount">Enter Amount (TZS)</label>
-                        <input type="number" name="amount" id="amount" min="1" step="1" required>
+                        <input type="number" name="amount" id="amount" min="<?php echo $application['total_amount']; ?>" step="1" required>
                         <small>Required: TZS <?php echo number_format($application['total_amount'], 2); ?></small>
                     </div>
-                    <button type="submit" class="btn-primary">Make Payment</button>
+                    <button type="submit" class="btn-primary" id="pay-btn">Make Payment</button>
                 </form>
             </div>
-        <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Processing Modal -->
+<div id="payment-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 40px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div style="margin-bottom: 20px;">
+            <div style="font-size: 48px; margin-bottom: 20px;">⏳</div>
+            <h2>Processing Payment...</h2>
+            <p>Please wait while we process your payment.</p>
+        </div>
+        <div style="width: 50px; height: 50px; border: 4px solid #ddd; border-top: 4px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+        <style>
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        </style>
     </div>
 </div>
 
 <script>
+document.getElementById('payment-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    // Hide form, show modal
+    document.getElementById('payment-form-section').style.display = 'none';
+    document.getElementById('payment-modal').style.display = 'flex';
+    
+    const formData = new FormData(this);
+    const paymentData = {
+        application_id: <?php echo $application_id; ?>,
+        amount: parseFloat(formData.get('amount')),
+        payment_method: formData.get('payment_method')
+    };
+    
+    try {
+        const response = await fetch('payment-api.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(paymentData)
+        });
+        
+        const result = await response.json();
+        
+        // Hide modal
+        document.getElementById('payment-modal').style.display = 'none';
+        
+        // Show result
+        const resultDiv = document.getElementById('payment-result');
+        const messageDiv = document.getElementById('payment-message');
+        const infoDiv = document.getElementById('transaction-info');
+        
+        if (result.success) {
+            messageDiv.innerHTML = '<div class="alert success">✓ ' + result.message + '</div>';
+            document.getElementById('txn-id').textContent = result.transaction_id;
+            document.getElementById('ref-number').textContent = result.reference_number;
+            document.getElementById('txn-amount').textContent = 'TZS ' + paymentData.amount.toLocaleString('en-TZ');
+            infoDiv.style.display = 'block';
+        } else {
+            messageDiv.innerHTML = '<div class="alert error">✗ ' + result.message + '</div>';
+            if (result.transaction_id) {
+                messageDiv.innerHTML += '<p style="margin-top: 10px; font-size: 12px; color: #666;">Transaction ID: ' + result.transaction_id + '</p>';
+            }
+            messageDiv.innerHTML += '<a href="javascript:location.reload()" class="btn-secondary" style="margin-top: 15px; display: inline-block;">Try Again</a>';
+            infoDiv.style.display = 'none';
+        }
+        
+        resultDiv.style.display = 'block';
+        
+    } catch (error) {
+        document.getElementById('payment-modal').style.display = 'none';
+        const messageDiv = document.getElementById('payment-message');
+        messageDiv.innerHTML = '<div class="alert error">Network error: ' + error.message + '</div>';
+        document.getElementById('payment-result').style.display = 'block';
+    }
+});
+
+// Show payment method details
 document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
     radio.addEventListener('change', function() {
-      
-        document.querySelectorAll('.bank-details, .mobile-details, .cash-details').forEach(detail => {
+        document.querySelectorAll('.bank-details, .mobile-details').forEach(detail => {
             detail.style.display = 'none';
         });
         
         if (this.value === 'bank_transfer') {
-            this.parentElement.querySelector('.bank-details').style.display = 'block';
+            this.closest('.payment-method').querySelector('.bank-details').style.display = 'block';
         } else if (this.value === 'mobile_money') {
-            this.parentElement.querySelector('.mobile-details').style.display = 'block';
-        } else if (this.value === 'cash') {
-            this.parentElement.querySelector('.cash-details').style.display = 'block';
+            this.closest('.payment-method').querySelector('.mobile-details').style.display = 'block';
         }
     });
 });
