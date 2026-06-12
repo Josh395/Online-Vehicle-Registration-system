@@ -66,6 +66,19 @@ $uploads = $stmt->fetchAll();
                 </div>
             </div>
 
+            <?php if ($application['status'] == 'rejected' && $application['rejection_reason']): ?>
+            <div class="application-section" style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin-bottom: 20px; border-radius: 5px;">
+                <h2 style="color: #856404; margin-top: 0;">Rejection Details</h2>
+                <p style="color: #856404; margin-bottom: 10px;">Your application was rejected for the following reason:</p>
+                <p style="color: #856404; font-weight: 600; padding: 10px; background: rgba(255,255,255,0.5); border-radius: 3px;">
+                    <?php echo htmlspecialchars($application['rejection_reason']); ?>
+                </p>
+                <p style="color: #856404; font-size: 14px; margin-top: 15px;">
+                    <a href="form.php?id=<?php echo $application['id']; ?>" style="color: #0c5460; font-weight: 600; text-decoration: none;">← Click here to update your application</a>
+                </p>
+            </div>
+            <?php endif; ?>
+
             <div class="application-section">
                 <h2>Personal Information</h2>
                 <div class="info-grid">

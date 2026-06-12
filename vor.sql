@@ -134,6 +134,7 @@ CREATE TABLE applications (
     cover_type VARCHAR(30),
     total_amount DECIMAL(10,2) DEFAULT 0.00,
     payment_status ENUM('pending', 'completed') DEFAULT 'pending',
+    rejection_reason TEXT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE

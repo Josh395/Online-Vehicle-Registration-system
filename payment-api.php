@@ -65,10 +65,11 @@ if ($test_fail) {
 // Payment successful - save to database
 try {
     $stmt = $pdo->prepare("
-        INSERT INTO payments (user_id, application_id, amount, payment_method, transaction_id, status, created_at) 
-        VALUES (?, ?, ?, ?, ?, 'completed', NOW())
+        INSERT INTO payments (control_number, owner_id, application_id, amount, method, status) 
+        VALUES (?, ?, ?, ?, ?, 'Paid')
     ");
-    $stmt->execute([$user_id, $application_id, $amount, ucfirst(str_replace('_', ' ', $payment_method)), $transaction_id]);
+    $payment_method_mapped = ($payment_method === 'bank_transfer') ? 'Bank' : 'MobileMoney';
+    $stmt->execute([$transaction_id, $user_id, $application_id, $amount, $payment_method_mapped]);
 
     // Update application payment status
     $stmt = $pdo->prepare("UPDATE applications SET payment_status = 'completed' WHERE id = ?");

@@ -120,6 +120,8 @@ $notifications = $stmt->fetchAll();
                                 <a href="view.php?id=<?php echo $item['id']; ?>" class="btn-secondary">View Details</a>
                                 <?php if ($item['status'] == 'draft'): ?>
                                     <a href="form.php?id=<?php echo $item['id']; ?>" class="btn-secondary">Continue Editing</a>
+                                <?php elseif ($item['status'] == 'rejected'): ?>
+                                    <a href="form.php?id=<?php echo $item['id']; ?>" class="btn-primary">Update Application</a>
                                 <?php elseif ($item['status'] == 'submitted' && $item['payment_status'] == 'pending'): ?>
                                     <a href="payment.php?id=<?php echo $item['id']; ?>" class="btn-primary">Make Payment</a>
                                 <?php elseif ($item['status'] == 'approved'): ?>

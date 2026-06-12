@@ -15,7 +15,8 @@ if (isset($_GET['id'])) {
     
     if ($application) {
         $edit_mode = true;
-        if ($application['status'] != 'draft') {
+        // Allow editing draft and rejected applications
+        if ($application['status'] != 'draft' && $application['status'] != 'rejected') {
             header("Location: dashboard.php");
             exit;
         }
@@ -119,9 +120,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         try {
             if ($edit_mode) {
-                // Update application
-                $sql = "UPDATE applications SET " . implode(', ', array_map(fn($k) => "$k = ?", array_keys($data))) . " WHERE id = ?";
+                // Update application and clear rejection reason if it was rejected
+                // If application was rejected, set it back to draft so user can review changes
+                $new_status = ($application['status'] == 'rejected') ? 'draft' : $application['status'];
+                $sql = "UPDATE applications SET " . implode(', ', array_map(fn($k) => "$k = ?", array_keys($data))) . ", status = ?, rejection_reason = NULL WHERE id = ?";
                 $params = array_values($data);
+                $params[] = $new_status;
                 $params[] = $application['id'];
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute($params);
@@ -187,6 +191,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <p>Reference: <?php echo htmlspecialchars($application['reference_number']); ?></p>
         <?php endif; ?>
     </div>
+
+    <?php if ($edit_mode && $application['status'] == 'rejected' && $application['rejection_reason']): ?>
+        <div class="alert error" style="margin-bottom: 20px;">
+            <strong>Application Rejected</strong>
+            <p>Please review the rejection reason below and make the necessary corrections:</p>
+            <p style="margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.1); border-left: 4px solid #dc3545; border-radius: 3px;">
+                <?php echo htmlspecialchars($application['rejection_reason']); ?>
+            </p>
+        </div>
+    <?php endif; ?>
 
     <?php if ($error): ?>
         <div class="alert error"><?php echo $error; ?></div>

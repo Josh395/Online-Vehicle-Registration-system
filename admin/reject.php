@@ -28,25 +28,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
     
     try {
-        // Update application status
-        $stmt = $pdo->prepare("UPDATE applications SET status = 'rejected' WHERE id = ?");
-        $stmt->execute([$application_id]);
+        // Update application status with rejection reason
+        $stmt = $pdo->prepare("UPDATE applications SET status = 'rejected', rejection_reason = ? WHERE id = ?");
+        $stmt->execute([$rejection_reason, $application_id]);
         
         // Create notification for user
         $message = "Your vehicle registration application " . $application['reference_number'] . " has been rejected. Reason: $rejection_reason";
         $stmt = $pdo->prepare("INSERT INTO notifications (user_id, application_id, message) VALUES (?, ?, ?)");
         $stmt->execute([$application['user_id'], $application_id, $message]);
         
-        $_SESSION['success'] = "Application rejected successfully";
-        header("Location: view-application.php?id=$application_id");
+        $_SESSION['success'] = "Application rejected successfully. User has been notified.";
+        header("Location: dashboard.php");
         exit;
     } catch (PDOException $e) {
         $_SESSION['error'] = "Error rejecting application: " . $e->getMessage();
-        header("Location: view-application.php?id=$application_id");
+        header("Location: dashboard.php");
         exit;
     }
 } else {
-    header("Location: view-application.php?id=$application_id");
+    header("Location: dashboard.php");
     exit;
 }
 ?>

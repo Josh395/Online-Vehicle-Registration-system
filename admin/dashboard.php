@@ -63,6 +63,20 @@ $transfer_requests = $transfer_stmt->fetchAll();
         <h1>Admin Dashboard</h1>
         <p>Welcome, <?php echo $_SESSION['admin_username']; ?> (<?php echo $_SESSION['admin_role']; ?>)</p>
 
+        <?php if (isset($_SESSION['success'])): ?>
+            <div class="alert success" style="margin-bottom: 20px;">
+                ✓ <?php echo htmlspecialchars($_SESSION['success']); ?>
+            </div>
+            <?php unset($_SESSION['success']); ?>
+        <?php endif; ?>
+
+        <?php if (isset($_SESSION['error'])): ?>
+            <div class="alert error" style="margin-bottom: 20px;">
+                ✗ <?php echo htmlspecialchars($_SESSION['error']); ?>
+            </div>
+            <?php unset($_SESSION['error']); ?>
+        <?php endif; ?>
+
         <div class="admin-stats">
             <div class="stat-card">
                 <h3>Total Applications</h3>

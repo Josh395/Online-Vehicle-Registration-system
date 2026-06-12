@@ -18,28 +18,25 @@ if (!$application) {
     exit;
 }
 
-// Generate plate number (format: T 123 ABC)
-function generatePlateNumber() {
-    $letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    $numbers = '0123456789';
-    
-    $plate = 'T ';
-    for ($i = 0; $i < 3; $i++) {
-        $plate .= $numbers[rand(0, 9)];
+// Generate plate number sequentially (format: T 001 AAA)
+function generatePlateNumber($pdo) {
+    $stmt = $pdo->query("SELECT registration_number FROM applications WHERE registration_number IS NOT NULL AND registration_number != '' ORDER BY id DESC LIMIT 1");
+    $last = $stmt->fetchColumn();
+
+    if ($last && preg_match('/^T\s+(\d+)\s+AAA$/', $last, $m)) {
+        $next = (int)$m[1] + 1;
+    } else {
+        $next = 1;
     }
-    $plate .= ' ';
-    for ($i = 0; $i < 3; $i++) {
-        $plate .= $letters[rand(0, 25)];
-    }
-    
-    return $plate;
+
+    return 'T ' . str_pad($next, 3, '0', STR_PAD_LEFT) . ' AAA';
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     try {
         // Only assign a new plate number and pickup message
         if (empty($application['registration_number'])) {
-            $plate_number = generatePlateNumber();
+            $plate_number = generatePlateNumber($pdo);
             $stmt = $pdo->prepare("UPDATE applications SET status = 'approved', registration_number = ? WHERE id = ?");
             $stmt->execute([$plate_number, $application_id]);
 
@@ -108,16 +105,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $stmt->execute([$application['user_id'], $application_id, $message]);
         }
 
-        $_SESSION['success'] = "Application approved successfully. Plate number: $plate_number";
-        header("Location: view-application.php?id=$application_id");
+        $_SESSION['success'] = "Application approved successfully. Plate number: $plate_number. User has been notified.";
+        header("Location: dashboard.php");
         exit;
     } catch (PDOException $e) {
         $_SESSION['error'] = "Error approving application: " . $e->getMessage();
-        header("Location: view-application.php?id=$application_id");
+        header("Location: dashboard.php");
         exit;
     }
 } else {
-    header("Location: view-application.php?id=$application_id");
+    header("Location: dashboard.php");
     exit;
 }
 ?>

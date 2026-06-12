@@ -551,6 +551,7 @@ body {
                     <?php echo ucfirst($application['status']); ?>
                 </span>
             </div>
+            <a href="dashboard.php" class="btn btn-secondary" style="text-decoration: none; margin-top: 10px;">← Back to Dashboard</a>
         </div>
 
         <div class="application-content">
@@ -566,6 +567,13 @@ body {
                     <div class="info-item"><strong>Plate Number:</strong><span><?php echo htmlspecialchars($application['registration_number']); ?></span></div>
                     <?php endif; ?>
                 </div>
+                
+                <?php if ($application['status'] == 'rejected' && $application['rejection_reason']): ?>
+                <div style="margin-top: 20px; padding: 15px; background: #f8d7da; border-left: 4px solid #dc3545; border-radius: 5px;">
+                    <p style="margin: 0 0 10px 0; color: #721c24;"><strong>Rejection Reason:</strong></p>
+                    <p style="margin: 0; color: #721c24;"><?php echo nl2br(htmlspecialchars($application['rejection_reason'])); ?></p>
+                </div>
+                <?php endif; ?>
             </div>
 
             <div class="application-section">
@@ -637,8 +645,8 @@ body {
                         
                         <form action="reject.php" method="POST">
                             <input type="hidden" name="id" value="<?php echo $application['id']; ?>">
-                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                                <input type="text" name="rejection_reason" placeholder="Reason for rejection" required>
+                            <div style="display: flex; flex-direction: column; gap: 10px; align-items: stretch;">
+                                <textarea name="rejection_reason" placeholder="Reason for Rejection" required style="padding: 12px 15px; border: 1px solid var(--light-gray); border-radius: var(--border-radius); font-size: 1rem; font-family: inherit; min-height: 100px; resize: vertical;"></textarea>
                                 <button type="submit" class="btn btn-danger" onclick="return confirm('Reject this application?')">
                                     Reject Application
                                 </button>
