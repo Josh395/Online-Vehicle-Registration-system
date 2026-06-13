@@ -20,8 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (isset($_POST['update_details'])) {
                 $fields = [
                     'full_name', 'dob', 'primary_phone', 'email', 'physical_address', 'id_type', 'id_number',
-                    'vin', 'make', 'model', 'year', 'vehicle_type', 'color', 'fuel_type',
-                    'insurance_provider', 'policy_number'
+                    'vin', 'make', 'model', 'year', 'vehicle_type', 'color', 'fuel_type'
                 ]; 
                 $updates = [];
                 $values = [];
@@ -113,8 +112,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </select>
 </div>
                 <div class="form-group"><label for="fuel_type">Fuel Type</label><input type="text" id="fuel_type" name="fuel_type" value="<?php echo htmlspecialchars($application['fuel_type']); ?>"></div>
-                <div class="form-group"><label for="insurance_provider">Insurance Provider</label><input type="text" id="insurance_provider" name="insurance_provider" value="<?php echo htmlspecialchars($application['insurance_provider']); ?>"></div>
-                <div class="form-group"><label for="policy_number">Policy Number</label><input type="text" id="policy_number" name="policy_number" value="<?php echo htmlspecialchars($application['policy_number']); ?>"></div>
                 <button type="submit" class="btn-secondary" name="update_details">Update Details</button>
                 <button type="submit" class="btn-primary" name="renew">Submit Renewal</button>
             </form>

@@ -183,12 +183,7 @@ $pdf->Cell(0, 18, $application['registration_number'], 0, 1, 'C');
 $pdf->SetTextColor(0, 0, 0);
 $pdf->Ln(8);
 
-// Insurance information
-$pdf->SetFillColor(240, 240, 240);
-$pdf->SetFont('helvetica', 'B', 12);
-$pdf->Cell(0, 8, 'INSURANCE INFORMATION', 0, 1, 'C', true);
-$pdf->SetFont('helvetica', '', 10);
-$pdf->Cell(0, 6, 'Provider: ' . (!empty($application['insurance_provider']) ? $application['insurance_provider'] : 'Not Specified') . '    Policy Number: ' . (!empty($application['policy_number']) ? $application['policy_number'] : 'N/A'), 0, 1, 'L');
+
 
 // Validity information
 $pdf->SetX(30);

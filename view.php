@@ -147,19 +147,7 @@ $uploads = $stmt->fetchAll();
                 </div>
             </div>
 
-            <div class="application-section">
-                <h2>Insurance Information</h2>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <strong>Insurance Provider:</strong>
-                        <span><?php echo htmlspecialchars($application['insurance_provider']); ?></span>
-                    </div>
-                    <div class="info-item">
-                        <strong>Policy Number:</strong>
-                        <span><?php echo htmlspecialchars($application['policy_number']); ?></span>
-                    </div>
-                </div>
-            </div>
+
 
             <?php if (!empty($uploads)): ?>
             <div class="application-section">

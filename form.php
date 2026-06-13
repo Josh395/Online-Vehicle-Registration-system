@@ -113,8 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             'vehicle_type' => $vehicle_type,
             'color' => $_POST['color'],
             'fuel_type' => $_POST['fuel_type'],
-            'insurance_provider' => $_POST['insurance_provider'],
-            'policy_number' => $_POST['policy_number'],
+
             'total_amount' => $amount
         ];
 
@@ -215,14 +214,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         <div class="form-section">
             <h2>Personal Information</h2>
-                <div class="form-group">
-                    <label for="nin_search">Enter NIDA (NIN) to lookup your details</label>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <input type="text" id="nin_search" name="nin_search" pattern="[0-9]{20}" maxlength="20" placeholder="Enter 20-digit NIN" style="flex:1;" value="<?php echo isset($nin_search) ? htmlspecialchars($nin_search) : ''; ?>" />
-                        <button type="button" id="lookup_nin" class="btn-secondary">Lookup</button>
-                    </div>
-                    <small>Click "Lookup" to fetch name, email and phone from our records.</small>
+            <div class="form-group">
+                <label for="nin_search">Enter NIDA (NIN) to lookup your details</label>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input type="text" id="nin_search" name="nin_search" pattern="[0-9]{20}" maxlength="20" placeholder="Enter 20-digit NIN" style="flex:1;" value="<?php echo isset($nin_search) ? htmlspecialchars($nin_search) : ''; ?>" />
+                    <button type="button" id="lookup_nin" class="btn-secondary">Lookup</button>
                 </div>
+                <small>Click "Lookup" to fetch your details from our records.</small>
+            </div>
+
+            <div id="ninLoader" class="nin-loader" style="display:none;">
+                <div class="spinner"></div>
+                <span>Fetching your information...</span>
+            </div>
+
+            <div id="personalInfoFields" class="personal-info-fields<?php echo $edit_mode ? ' visible' : ''; ?>">
                 <div class="form-group">
                     <label for="full_name">Full Name *</label>
                     <input type="text" id="full_name" name="full_name" required readonly value="<?php echo $edit_mode ? htmlspecialchars($application['full_name']) : (isset($full_name) ? htmlspecialchars($full_name) : ''); ?>">
@@ -265,6 +271,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <label for="email">Email Address *</label>
                     <input type="email" id="email" name="email" required readonly placeholder="e.g. joshalexander@gmail.com" value="<?php echo $edit_mode ? htmlspecialchars($application['email']) : (isset($email) ? htmlspecialchars($email) : ''); ?>">
                 </div>
+            </div>
         </div>
 <script>
 function updateIdNumberField() {
@@ -311,6 +318,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     var lookupBtn = document.getElementById('lookup_nin');
     var ninInput = document.getElementById('nin_search');
+    var loader = document.getElementById('ninLoader');
+    var infoFields = document.getElementById('personalInfoFields');
+
     lookupBtn && lookupBtn.addEventListener('click', async function() {
         var nin = ninInput.value.trim();
         if (!nin || !/^[0-9]{20}$/.test(nin)) {
@@ -319,21 +329,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         lookupBtn.disabled = true;
         lookupBtn.textContent = 'Looking up...';
+        infoFields.classList.remove('visible');
+        loader.style.display = 'flex';
         const result = await lookupNin(nin);
+        loader.style.display = 'none';
         lookupBtn.disabled = false;
         lookupBtn.textContent = 'Lookup';
         if (result.success) {
-            // Prefill fields
             if (result.data.name) document.getElementById('full_name').value = result.data.name;
             if (result.data.dob) document.getElementById('dob').value = result.data.dob;
             if (result.data.physical_address) document.getElementById('physical_address').value = result.data.physical_address;
             if (result.data.email) document.getElementById('email').value = result.data.email;
             if (result.data.phone) document.getElementById('primary_phone').value = result.data.phone;
-            // set ID type and number
             document.getElementById('id_type').value = 'national_id';
             updateIdNumberField();
             document.getElementById('id_number').value = nin;
-            // store tin in a hidden field so server-side can validate if needed
             var existing = document.getElementById('user_tin_hidden');
             if (!existing) {
                 existing = document.createElement('input');
@@ -343,7 +353,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.querySelector('form.vehicle-form').appendChild(existing);
             }
             existing.value = result.data.tin || '';
-            alert('User information populated from NIN. Please complete remaining fields.');
+            setTimeout(function() {
+                infoFields.classList.add('visible');
+            }, 100);
         } else {
             alert(result.message || 'No user found for that NIN.');
         }
@@ -443,39 +455,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         </div>
 
-        <div class="form-section">
-            <h2>Insurance Information</h2>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="insurance_provider">Insurance Company Name *</label>
-                    <input type="text" id="insurance_provider" name="insurance_provider" required pattern="[A-Za-z0-9\s\.'-]{2,100}" title="Enter a valid company name (letters, numbers, spaces, dot, apostrophe, dash)" placeholder="e.g. Jubilee Insurance" value="<?php echo $edit_mode ? htmlspecialchars($application['insurance_provider']) : ''; ?>">
-                </div>
 
-                <div class="form-group">
-                    <label for="policy_number">Insurance Policy Number *</label>
-                    <input type="text" id="policy_number" name="policy_number" required pattern="[A-Za-z0-9-]{5,30}" title="Enter a valid policy number (5-30 alphanumeric or dash)" placeholder="e.g. POL123456" value="<?php echo $edit_mode ? htmlspecialchars($application['policy_number']) : ''; ?>">
-                </div>
-
-                <div class="form-group">
-                    <label for="insurance_start">Insurance Start Date *</label>
-                    <input type="date" id="insurance_start" name="insurance_start" required value="<?php echo $edit_mode && isset($application['insurance_start']) ? htmlspecialchars($application['insurance_start']) : ''; ?>">
-                </div>
-
-                <div class="form-group">
-                    <label for="insurance_expiry">Insurance Expiry Date *</label>
-                    <input type="date" id="insurance_expiry" name="insurance_expiry" required value="<?php echo $edit_mode && isset($application['insurance_expiry']) ? htmlspecialchars($application['insurance_expiry']) : ''; ?>">
-                </div>
-
-                <div class="form-group">
-                    <label for="cover_type">Type of Cover *</label>
-                    <select id="cover_type" name="cover_type" required>
-                        <option value="">Select Cover Type</option>
-                        <option value="third_party" <?php echo ($edit_mode && isset($application['cover_type']) && $application['cover_type'] == 'third_party') ? 'selected' : ''; ?>>Third Party</option>
-                        <option value="comprehensive" <?php echo ($edit_mode && isset($application['cover_type']) && $application['cover_type'] == 'comprehensive') ? 'selected' : ''; ?>>Comprehensive</option>
-                    </select>
-                </div>
-            </div>
-        </div>
 
         <div class="form-actions">
             <button type="submit" name="save_draft" class="btn-secondary" onclick="document.getElementById('form_action').value='save'">

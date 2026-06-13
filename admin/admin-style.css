@@ -5,6 +5,13 @@
     font-family: 'Poppins', sans-serif;
 }
 
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding-top: 80px;
+}
+
 .admin-header {
     min-height: 30vh;
     width: 100%;
@@ -17,11 +24,15 @@
 
 .admin-nav {
     display: flex;
-    padding: 2% 6%;
+    padding: 1% 6%;
     justify-content: space-between;
     align-items: center;
-    position: relative;
-    z-index: 10;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: #1a2b4b;
 }
 
 .admin-nav img {
@@ -93,6 +104,7 @@
 }
 
 .admin-container {
+    flex: 1;
     width: 80%;
     margin: 40px auto;
     padding: 20px;
@@ -345,7 +357,7 @@
 }
 
 .login-container {
-    min-height: 100vh;
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;

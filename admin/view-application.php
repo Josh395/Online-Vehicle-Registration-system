@@ -53,6 +53,24 @@ body {
     line-height: 1.6;
     color: #333;
     background-color: #f5f7f9;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding-top: 80px;
+}
+
+.admin-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: var(--primary);
+    padding: 10px 20px;
+    box-shadow: var(--box-shadow);
 }
 
 .admin-header {
@@ -62,15 +80,6 @@ body {
     position: relative;
     box-shadow: var(--box-shadow);
     margin-bottom: 30px;
-}
-
-.admin-nav {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
 }
 
 .admin-nav a img {
@@ -418,7 +427,7 @@ body {
 .footer {
     text-align: center;
     padding: 30px 20px;
-    margin-top: 40px;
+    margin-top: auto;
     color: var(--gray);
     border-top: 1px solid var(--light-gray);
     background-color: #78b4f0ff;
@@ -519,18 +528,18 @@ body {
 }
 </style>
 
+<nav class="admin-nav">
+    <a href="../index.php"><img src="../images/tra.png"></a>
+    <div class="admin-nav-links">
+        <ul>
+            <li><a href="../index.php">HOME</a></li>
+            <li><a href="dashboard.php" class="active">DASHBOARD</a></li>
+            <li><a href="logout.php">LOGOUT</a></li>
+        </ul>
+    </div>
+</nav>
+
 <div class="admin-header">
-    <nav class="admin-nav">
-        <a href="../index.php"><img src="../images/tra.png"></a>
-        <div class="admin-nav-links">
-            <ul>
-                <li><a href="../index.php">HOME</a></li>
-                <li><a href="dashboard.php" class="active">DASHBOARD</a></li>
-                <li><a href="logout.php">LOGOUT</a></li>
-            </ul>
-        </div>
-    </nav>
-    
     <div class="admin-text-box">
         <h1>Admin Portal</h1>
         <p>Vehicle Registration System Management</p>
@@ -605,16 +614,7 @@ body {
                 </div>
             </div>
 
-            <div class="application-section">
-                <h2>Insurance Information</h2>
-                <div class="info-grid">
-                    <div class="info-item"><strong>Insurance Provider:</strong><span><?php echo htmlspecialchars($application['insurance_provider']); ?></span></div>
-                    <div class="info-item"><strong>Policy Number:</strong><span><?php echo htmlspecialchars($application['policy_number']); ?></span></div>
-                    <div class="info-item"><strong>Insurance Start Date:</strong><span><?php echo htmlspecialchars($application['insurance_start']); ?></span></div>
-                    <div class="info-item"><strong>Insurance Expiry Date:</strong><span><?php echo htmlspecialchars($application['insurance_expiry']); ?></span></div>
-                    <div class="info-item"><strong>Type of Cover:</strong><span><?php echo htmlspecialchars($application['cover_type']); ?></span></div>
-                </div>
-            </div>
+
 
             <?php if (!empty($uploads)): ?>
             <div class="application-section">
