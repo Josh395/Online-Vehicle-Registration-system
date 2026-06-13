@@ -25,27 +25,20 @@ Online Vehicle Registration System — PHP/MySQL app for vehicle registration, t
 
 ## Installation
 
-1. Clone the repository to your web root:
-
-```bash
-git clone <your-repo-url> Online_Vehicle_Registration_System
-cd Online_Vehicle_Registration_System
-```
-
-2. Import the database schema using the provided SQL file `vor.sql` (use phpMyAdmin or MySQL CLI):
+1. Import the database schema using the provided SQL file `vor.sql` (use phpMyAdmin or MySQL CLI):
 
 ```bash
 mysql -u root -p vor < vor.sql
 ```
 
-3. Configure database credentials in `config.php` if needed (defaults target a local XAMPP setup):
+2. Configure database credentials in `config.php` if needed (defaults target a local XAMPP setup):
 
 - `DB_HOST` = `localhost`
 - `DB_NAME` = `vor`
 - `DB_USER` = `root`
 - `DB_PASS` = `` (empty by default)
 
-4. Place the project in your web server document root (e.g., `C:\xampp\htdocs`) and open:
+3. Place the project in your web server document root (e.g., `C:\xampp\htdocs`) and open:
 
 ```
 http://localhost/Online_Vehicle_Registration_System/
